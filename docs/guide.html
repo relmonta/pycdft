@@ -1,0 +1,497 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>PyCDFt — A Plain-Language Guide</title>
+<style>
+  :root { --ink:#1c2733; --muted:#5a6b7a; --brand:#0f6f6c; --brand-dark:#0a4f4d; --bg:#fff;
+          --panel:#f5f8f8; --border:#dde6e6; --accent:#b5500f; --code-bg:#f3f6f6; --warn-bg:#fdf4ec; --row:#fafcfc; }
+  @media (prefers-color-scheme: dark) {
+    :root { --ink:#e3ebf0; --muted:#9fb0bd; --brand:#4fb8b4; --brand-dark:#7fd3cf; --bg:#10181e;
+            --panel:#18242c; --border:#2b3b45; --accent:#f0a068; --code-bg:#18242c; --warn-bg:#2a2018; --row:#141f26; }
+  }
+  * { box-sizing: border-box; }
+  body { margin:0; font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;
+         line-height:1.65; color:var(--ink); background:var(--bg); }
+  .wrap { max-width:60rem; margin:0 auto; padding:0 1.25rem 4rem; }
+  header.mast { background:linear-gradient(135deg,#0f6f6c,#0a4f4d); color:#fff; padding:2.6rem 1.25rem 2.2rem; text-align:center; }
+  header.mast h1 { margin:0 0 .4rem; font-size:2.1rem; letter-spacing:-.02em; }
+  header.mast p { margin:0; font-size:1.05rem; opacity:.92; }
+  header.mast .badge { display:inline-block; margin-top:.9rem; padding:.28rem .7rem; background:rgba(255,255,255,.16); border-radius:999px; font-size:.82rem; }
+  nav.toc { position:sticky; top:0; z-index:5; background:var(--bg); border-bottom:1px solid var(--border);
+            padding:.55rem 1.25rem; overflow-x:auto; white-space:nowrap; }
+  nav.toc a { color:var(--brand-dark); text-decoration:none; font-size:.88rem; margin-right:1rem; }
+  nav.toc a:hover { text-decoration:underline; }
+  h2 { font-size:1.55rem; margin-top:3rem; color:var(--brand-dark); border-bottom:2px solid var(--border); padding-bottom:.35rem; scroll-margin-top:3rem; }
+  h3 { font-size:1.2rem; margin-top:2rem; }
+  h4 { font-size:1.02rem; margin-top:1.4rem; }
+  p { margin:.85rem 0; }
+  a { color:var(--brand-dark); }
+  .callout, .tip { padding:.8rem 1rem; margin:1.2rem 0; border-radius:0 .5rem .5rem 0; }
+  .callout { border-left:4px solid var(--accent); background:var(--warn-bg); }
+  .tip { border-left:4px solid var(--brand); background:var(--panel); }
+  .label { font-weight:700; text-transform:uppercase; font-size:.72rem; letter-spacing:.06em; }
+  .callout .label { color:var(--accent); } .tip .label { color:var(--brand-dark); }
+  .callout p, .tip p { margin:.3rem 0 0; }
+  pre { background:var(--code-bg); border:1px solid var(--border); border-radius:.5rem; padding:.9rem 1rem; overflow-x:auto; font-size:.86rem; line-height:1.5; }
+  code { font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace; background:var(--code-bg); padding:.1rem .3rem; border-radius:.25rem; font-size:.88em; }
+  pre code { background:none; padding:0; }
+  .scroll { overflow-x:auto; }
+  table { border-collapse:collapse; width:100%; margin:1.2rem 0; font-size:.92rem; }
+  th, td { border:1px solid var(--border); padding:.5rem .7rem; text-align:left; vertical-align:top; }
+  th { background:var(--panel); color:var(--brand-dark); }
+  tr:nth-child(even) td { background:var(--row); }
+  ul, ol { padding-left:1.4rem; } li { margin:.35rem 0; }
+  mjx-container[display="true"] { overflow-x:auto; overflow-y:hidden; }
+  footer { margin-top:4rem; padding-top:1rem; border-top:1px solid var(--border); color:var(--muted); font-size:.85rem; }
+</style>
+<script>
+  window.MathJax = { tex: { inlineMath: [['\\(', '\\)']], displayMath: [['\\[', '\\]']] } };
+</script>
+<script src="https://cdn.jsdelivr.net/npm/mathjax@3.2.2/es5/tex-mml-chtml.js" id="MathJax-script" async></script>
+</head>
+<body>
+
+<header class="mast">
+  <h1>PyCDFt — A Plain-Language Guide</h1>
+  <p>Understand and use CDF-t statistical downscaling and bias correction — without a statistics degree.</p>
+  <span class="badge">Apache-2.0 &middot; numpy core &middot; optional GPU backend</span>
+</header>
+
+<nav class="toc">
+  <a href="#what">1 What is PyCDFt?</a>
+  <a href="#problem">2 The problem</a>
+  <a href="#install">3 Install</a>
+  <a href="#quickstart">4 Quick start</a>
+  <a href="#cdf-t">5 How CDF-t works</a>
+  <a href="#concepts">6 Core concepts</a>
+  <a href="#api">7 API</a>
+  <a href="#gpu">8 GPU</a>
+  <a href="#compare">9 Comparison</a>
+  <a href="#refs">10 References</a>
+</nav>
+
+<main class="wrap">
+
+<!-- 1 ============================================================ -->
+<section id="what">
+  <h2>1. What is PyCDFt?</h2>
+  <p>
+    <strong>PyCDFt</strong> is a small, free, open-source Python library that
+    does one job: it <em>corrects</em> and <em>refines</em> climate-model data
+    so it matches real-world observations more closely. The technique is
+    <strong>CDF-t</strong> (Cumulative Distribution Function transform), and
+    PyCDFt is a fast, clean implementation of it.
+  </p>
+  <p>Two things make it practical:</p>
+  <ul>
+    <li><strong>Works on grids.</strong> Correct one time series, or a whole field of many locations, in a single call.</li>
+    <li><strong>Built for scale.</strong> Vectorized and chunked, so thousands of grid points × decades of data fit on a laptop or a supercomputer.</li>
+  </ul>
+
+  <div class="callout">
+    <span class="label">In plain words</span>
+    <p>
+      Think of PyCDFt as a <em>translator</em> between two languages: the one
+      spoken by a climate model (coarse, and a bit off) and the one spoken by
+      real observations (fine, and trustworthy). PyCDFt learns the
+      "dictionary" from a past period, then uses it to rewrite the model's
+      data for another period — typically the future — in a way that is both
+      realistic and consistent with the model's projected change.
+    </p>
+  </div>
+
+  <p>The library has two layers:</p>
+  <table>
+    <tr><th>Layer</th><th>What it does</th><th>Where it lives</th></tr>
+    <tr><td>Core</td><td>The CDF-t math in numpy. Always installed; the stable, tested heart.</td><td><code>pycdft</code></td></tr>
+    <tr><td>GPU backend</td><td>Optional. The same math in torch, which can be faster on large grids (see §8).</td><td><code>pycdft.gpu</code></td></tr>
+  </table>
+  <p>
+    This page is the plain-language companion to <code>README.md</code> (quick
+    start, API, comparison tables). Mathematical details and design choices
+    are in <code>docs/design.md</code>; the GPU backend is in <code>docs/gpu.md</code>.
+  </p>
+</section>
+
+<!-- 2 ============================================================ -->
+<section id="problem">
+  <h2>2. The problem PyCDFt solves</h2>
+  <p>Global climate models (GCMs) simulate the whole planet, but they are:</p>
+  <ul>
+    <li><strong>Coarse</strong> — a grid cell may be ~100&nbsp;km wide, too big for local decisions (a farm, a city, a solar plant).</li>
+    <li><strong>Biased</strong> — they often run systematically too warm, too dry or too cloudy compared with measurements.</li>
+  </ul>
+  <p>Two techniques address this:</p>
+  <ol>
+    <li><strong>Bias correction:</strong> remove the model's systematic error by comparing it with observations over a shared <em>calibration period</em>.</li>
+    <li><strong>Downscaling:</strong> turn coarse model data into fine, location-specific data.</li>
+  </ol>
+  <p>
+    CDF-t does both at once, and it also preserves how the model's climate
+    <em>changes</em> between the calibration period and the target period.
+  </p>
+
+  <div class="tip">
+    <span class="label">Why "change" matters</span>
+    <p>
+      A simple method says "the model is 2&nbsp;°C too warm, so subtract
+      2&nbsp;°C." But the bias itself can differ across the distribution, and
+      the climate shifts over time. CDF-t carries the model's <em>evolution</em>
+      (how its distribution shifts and widens) onto the observation scale. A
+      mean shift (§5.3) is used only as a first step; the quantile transfer
+      handles the rest.
+    </p>
+  </div>
+
+  <h3>2.1 The inputs, in standard vocabulary</h3>
+  <p>The API takes exactly three inputs and returns one output:</p>
+  <div class="scroll"><table>
+    <tr><th>PyCDFt name</th><th>Standard term</th><th>What it is</th></tr>
+    <tr><td><code>obs</code></td><td>observations, calibration period (HR)</td>
+      <td>High-resolution observations — the reference the model is corrected against.</td></tr>
+    <tr><td><code>cm_hist</code></td><td>model, calibration period (LR)</td>
+      <td>Coarse model data for the same calibration period as <code>obs</code>.</td></tr>
+    <tr><td><code>cm_future</code></td><td>model, target period (LR)</td>
+      <td>Coarse model data you want to refine. The name says "future", but it can be any target period, including a held-out period for validation.</td></tr>
+    <tr><td>output of <code>transform(cm_future)</code></td><td>downscaled output (HR)</td>
+      <td>The corrected, high-resolution estimate for the target period.</td></tr>
+  </table></div>
+  <div class="callout">
+    <span class="label">In plain words</span>
+    <p>
+      The model (LR) is the <em>input</em>; the observations (HR) are the
+      <em>reference</em>. You calibrate on a past model/observation pair, then
+      apply the mapping to the target-period model data. When you work with a
+      field of locations, each location pairs its observations with the model
+      series chosen for it. To validate, hold out a later period, downscale it,
+      and compare with that period's observations — the library only does the
+      mapping, the evaluation is up to you.
+    </p>
+  </div>
+</section>
+
+<!-- 3 ============================================================ -->
+<section id="install">
+  <h2>3. Installation</h2>
+  <p>You need Python 3.9 or newer. The core is <strong>numpy only</strong>:</p>
+  <pre><code>pip install pycdft              # from PyPI
+pip install "pycdft[gpu]"       # + optional torch GPU backend
+pip install -e ".[test]"        # development install (from the repository)</code></pre>
+  <p>(The quotes keep shells such as zsh from interpreting the brackets.) Optional extras:</p>
+  <table>
+    <tr><th>Extra</th><th>What it adds</th></tr>
+    <tr><td><code>[gpu]</code></td><td>torch, for the GPU backend (<code>pycdft.gpu</code>). For a specific build (ROCm, CPU-only) install that torch first — see §8.</td></tr>
+    <tr><td><code>[examples]</code></td><td>Matplotlib, only to run the example scripts and save figures.</td></tr>
+    <tr><td><code>[cross]</code></td><td>ibicus, only for the optional cross-validation tests.</td></tr>
+    <tr><td><code>[test]</code></td><td>pytest, for running the test suite.</td></tr>
+    <tr><td><code>[dev]</code></td><td>pytest + pyflakes, for development (tests and lint).</td></tr>
+  </table>
+</section>
+
+<!-- 4 ============================================================ -->
+<section id="quickstart">
+  <h2>4. Quick start</h2>
+  <p>The whole library in a few lines (time is the first axis):</p>
+  <pre><code>import numpy as np
+from pycdft import CDFt
+
+rng = np.random.default_rng(7)
+obs       = rng.normal(0.0, 1.0, 1000)   # observations (calibration period)
+cm_hist   = rng.normal(3.0, 1.0, 1000)   # model (calibration period)
+cm_future = rng.normal(4.0, 1.0, 1000)   # model (target period)
+
+model = CDFt(n_quantiles=1001, tail="linear", delta_shift="additive")
+ds = model.fit_transform(obs, cm_hist, cm_future)   # downscaled output</code></pre>
+  <p>
+    The 2-D field form (each column an independent location), the one-shot
+    <code>cdft_transform</code>, the <code>fit</code>/<code>transform</code>
+    split and the histogram path are in the README quick start.
+  </p>
+</section>
+
+<!-- 5 ============================================================ -->
+<section id="cdf-t">
+  <h2>5. How CDF-t works</h2>
+  <p>
+    CDF-t was published by Michelangeli, Vrac &amp; Loukos in 2009. It corrects
+    the model's target-period distribution so that it looks like the
+    observations <em>would</em> have looked had they experienced the same
+    climate change as the model.
+  </p>
+
+  <h3>5.1 The building blocks: CDF and quantile function</h3>
+  <p>
+    A <strong>CDF</strong>, written \(F(x)\), answers: "what fraction of the
+    values in a dataset are smaller than or equal to \(x\)?" It is a number
+    between 0 and 1 that tells you how far up the ranking \(x\) sits.
+  </p>
+  <ul>
+    <li>\(F(x) = 0\): \(x\) lies below every value in the dataset.</li>
+    <li>\(F(x) = 0.5\): \(x\) is the median.</li>
+    <li>\(F(x) = 1\): \(x\) is at or above the largest value.</li>
+  </ul>
+  <p>
+    The inverse of a CDF is the <strong>quantile function</strong> \(q(p)\):
+    given a fraction \(p\) (say 0.5), it returns the value at that position in
+    the ranking. Notation, as in the R CDFt package and ibicus:
+  </p>
+  <div class="scroll"><table>
+    <tr><th>Symbol</th><th>Meaning</th></tr>
+    <tr><td>\(F_m^{cal}\), \(q_m^{cal}\)</td><td>model (LR) CDF and quantile function, calibration period — this is <code>cm_hist</code>.</td></tr>
+    <tr><td>\(F_o^{cal}\), \(q_o^{cal}\)</td><td>observation (HR) CDF and quantile function, calibration period — this is <code>obs</code>.</td></tr>
+    <tr><td>\(F_m^{tar}\), \(q_m^{tar}\)</td><td>model (LR) CDF and quantile function, target period — this is <code>cm_future</code>.</td></tr>
+    <tr><td>\(F_o^{tar}\)</td><td>target-period observation CDF — the HR distribution we are after (the output).</td></tr>
+    <tr><td>\(m_{cal}\), \(o_{cal}\)</td><td>model and observation series in the calibration period (used in the delta shift)</td></tr>
+  </table></div>
+  <p>
+    Superscripts: \(cal\) = calibration period, \(tar\) = target period.
+    Subscripts: \(o\) = observations (HR), \(m\) = model (LR). Below,
+    \((F_m^{cal})^{-1}\) and \(q_m^{cal}\) mean the same thing. Model series
+    are taken <em>after</em> the delta shift of §5.3.
+  </p>
+
+  <h3>5.2 The CDF-t formulas</h3>
+  <p>CDF-t estimates the target observation CDF from three known ones:</p>
+  \[
+    F_o^{tar} = F_o^{cal} \circ (F_m^{cal})^{-1} \circ F_m^{tar}
+  \]
+  <div class="callout">
+    <span class="label">In plain words</span>
+    <p>
+      Read right to left: where does a value rank in the target-period model
+      (\(F_m^{tar}\)), which calibration-period model value has that rank
+      (\((F_m^{cal})^{-1}\)), and how often does a calibration-period
+      observation fall below that value (\(F_o^{cal}\))?
+    </p>
+  </div>
+
+  <p>
+    The downscaled value for a target-period model value \(x\) is found by
+    inverting that CDF at the rank of \(x\):
+  </p>
+  \[
+    y(x) = q_m^{tar}\Big( F_m^{cal}\big( q_o^{cal}\big( F_m^{tar}(x) \big) \big) \Big)
+  \]
+  <div class="callout">
+    <span class="label">In plain words — step by step</span>
+    <ol>
+      <li>\(p = F_m^{tar}(x)\) — where does \(x\) rank in the target-period model? A fraction from 0 to 1.</li>
+      <li>\(q_o^{cal}(p)\) — which calibration-period <em>observation</em> has that rank? An observation value.</li>
+      <li>\(F_m^{cal}(\cdot)\) — where does that value rank among the calibration-period <em>model</em> values? A fraction.</li>
+      <li>\(q_m^{tar}(\cdot)\) — which target-period model value has that rank? That is the downscaled output \(y\).</li>
+    </ol>
+    <p>
+      Steps 2 and 3 are the calibration part: they compare observations with
+      the model over the calibration period, and this is where the bias is
+      corrected. Steps 1 and 4 use the target-period model distribution, which
+      is how the model's change is carried through. If the model had no bias
+      (steps 2–3 do nothing), the output equals the input.
+    </p>
+  </div>
+
+  <p>
+    A useful check: if the target-period model distribution equals the
+    calibration one (\(F_m^{tar} = F_m^{cal}\)), the formula collapses to
+    classical quantile mapping, \(y = q_o^{cal}(F_m^{cal}(x))\). So when the
+    model does not change, CDF-t reduces to ordinary quantile mapping
+    (verified in <code>tests/test_core.py</code>).
+  </p>
+
+  <h3>5.3 The delta shift</h3>
+  <p>
+    Before the transfer, PyCDFt (like the reference implementations) can
+    re-centre the model so its average matches the observations' average. The
+    same shift, computed from the calibration period, is applied to both the
+    model's calibration and target series. Three modes:
+  </p>
+  \[
+    \begin{aligned}
+      \text{additive:}       & \quad x \to x + \big( \mathrm{mean}(o_{cal}) - \mathrm{mean}(m_{cal}) \big) \\
+      \text{multiplicative:} & \quad x \to x \times \frac{\mathrm{mean}(o_{cal})}{\mathrm{mean}(m_{cal})} \\
+      \text{none:}           & \quad \text{(no change)}
+    \end{aligned}
+  \]
+  <div class="callout">
+    <span class="label">In plain words</span>
+    <p>
+      The model usually has a persistent average error relative to the
+      calibration-period observations. "Additive" adds or subtracts a constant
+      to remove it. "Multiplicative" scales by a ratio — better for quantities
+      that must stay positive, such as rainfall or sunlight. "None" shifts
+      nothing. Because the same shift is applied to both periods, the average
+      bias is removed but the model's change between them is kept.
+    </p>
+  </div>
+
+  <h3>5.4 How PyCDFt evaluates it (the grid)</h3>
+  <p>
+    Rather than running the formula for every single value (slow), PyCDFt
+    evaluates it on a fixed set of probabilities
+    \(p_k = \mathrm{linspace}(0, 1, Q)\) (default \(Q = 1001\)) and then
+    interpolates. Three quantities are computed:
+  </p>
+  \[
+    \begin{aligned}
+      R_k &= F_m^{cal}\big( q_o^{cal}(p_k) \big) && \text{(calibration only — independent of the target period)} \\
+      x_{\text{grid},k} &= q_m^{tar}(p_k) && \text{(target period)} \\
+      T_k &= q_m^{tar}(R_k) && \text{(target period)}
+    \end{aligned}
+  \]
+  <p>
+    The output for any target-period model value \(x\) is then a
+    piecewise-linear interpolation of \(T\) against \(x_{\text{grid}}\):
+  </p>
+  \[
+    y(x) = \mathrm{interp}(x,\, x_{\text{grid}},\, T)
+  \]
+  <div class="callout">
+    <span class="label">In plain words</span>
+    <p>
+      Building a lookup table once is much faster than recomputing everything
+      per value. And since \(R\) depends only on the calibration period, you
+      can fit it once and reuse it for many target periods, scenarios or
+      ensemble members.
+    </p>
+  </div>
+</section>
+
+<!-- 6 ============================================================ -->
+<section id="concepts">
+  <h2>6. Core concepts you should know</h2>
+
+  <h3>6.1 Tails — what happens beyond the data</h3>
+  <p>
+    Real data is finite, so the transfer curve has a start and an end. The
+    question is what to do for values outside that range. PyCDFt offers two choices:
+  </p>
+  <div class="scroll"><table>
+    <tr><th>Option</th><th>Behaviour</th><th>When to use</th></tr>
+    <tr><td><code>tail="clip"</code></td><td>Hold the constant end value.</td>
+      <td>When the output must never leave the observed range.</td></tr>
+    <tr><td><code>tail="linear"</code> (default)</td>
+      <td>Extend with a straight line whose slope is measured near the edge and capped.</td>
+      <td>When extremes matter and you want a smooth, sensible extension.</td></tr>
+  </table></div>
+  <p>
+    In linear mode, PyCDFt fits a straight line to the last 30 points of the
+    transfer, then limits its steepness to at most twice the median slope in
+    the middle. The extrapolation stays realistic and bounded.
+  </p>
+
+  <h3>6.2 Missing data (NaN)</h3>
+  <p>Missing values are handled in four cases:</p>
+  <ol>
+    <li>NaNs scattered in the calibration data are ignored (excluded from counts and averages).</li>
+    <li>NaNs in the target-period input pass through as NaN, at those positions only.</li>
+    <li>If one location's calibration data is entirely NaN, that location maps to NaN instead of crashing the run.</li>
+    <li>An entirely NaN target field gives an entirely NaN output.</li>
+  </ol>
+  <p>
+    For comparison, ibicus does not support missing data and the R
+    <code>CDFt</code> package drops NaNs. In PyCDFt the output stays aligned
+    with the input and one bad location does not affect the others.
+  </p>
+
+  <h3>6.3 Memory-friendly design</h3>
+  <ul>
+    <li>Calibration data keeps its original type (float32 stays float32) to save memory; internal math uses float64 for accuracy.</li>
+    <li>Calculations run in small <em>chunks</em> of grid cells so intermediate results stay under a memory limit (default 2&nbsp;GiB).</li>
+    <li>The caller's arrays are never modified.</li>
+    <li>For very long records, <strong>histogram mode</strong> (<code>use_histograms=True</code>) builds a compact summary instead of keeping every value, trading a little accuracy for much less memory.</li>
+  </ul>
+</section>
+
+<!-- 7 ============================================================ -->
+<section id="api">
+  <h2>7. API reference</h2>
+  <h3>7.1 Entry points</h3>
+  <table>
+    <tr><th>Name</th><th>Use</th></tr>
+    <tr><td><code>CDFt(...)</code></td><td>High-level class with <code>.fit(obs, cm_hist)</code>, <code>.transform(cm_future)</code> and <code>.fit_transform(obs, cm_hist, cm_future)</code>.</td></tr>
+    <tr><td><code>cdft_transform(obs, cm_hist, cm_future, ...)</code></td><td>One-shot functional form.</td></tr>
+    <tr><td><code>calibrate</code>, <code>apply_cdft</code></td><td>Low-level building blocks (below).</td></tr>
+  </table>
+
+  <h3>7.2 <code>CDFt</code> options</h3>
+  <table>
+    <tr><th>Parameter</th><th>Default</th><th>Meaning</th></tr>
+    <tr><td><code>n_quantiles</code></td><td>1001</td><td>Number of probability points \(Q\) on the transfer grid (§5.4).</td></tr>
+    <tr><td><code>tail</code></td><td><code>"linear"</code></td><td>Handling of values beyond the data range: <code>"linear"</code> or <code>"clip"</code> (§6.1).</td></tr>
+    <tr><td><code>delta_shift</code></td><td><code>"additive"</code></td><td>How to remove the model's average bias: <code>"additive"</code>, <code>"multiplicative"</code> or <code>"none"</code> (§5.3).</td></tr>
+    <tr><td><code>use_histograms</code></td><td><code>False</code></td><td>Compact histogram path for very long records (§6.3).</td></tr>
+    <tr><td><code>n_bins</code></td><td>2000</td><td>Number of bins in histogram mode.</td></tr>
+    <tr><td><code>workers</code></td><td>1</td><td>Threads for parallel per-location work.</td></tr>
+  </table>
+
+  <h3>7.3 Low-level building blocks</h3>
+  <p>
+    For custom pipelines, <code>pycdft.core</code> exposes
+    <code>calibrate</code>/<code>apply_cdft</code> and <code>pycdft.math</code>
+    the individual kernels; see the README's "Low-level API" for a runnable
+    example.
+  </p>
+  <div class="callout">
+    <span class="label">Check the argument order</span>
+    <p>
+      <code>calibrate</code> takes the model first and the observations second,
+      the reverse of <code>CDFt.fit(obs, cm_hist)</code>. Confirm against the
+      signature in your installed version before relying on it.
+    </p>
+  </div>
+  <p>
+    The calibration object is <em>target-independent</em>: fit it once, then
+    reuse it for any number of target periods, scenarios or ensemble members.
+  </p>
+</section>
+
+<!-- 8 ============================================================ -->
+<section id="gpu">
+  <h2>8. The GPU backend</h2>
+  <p>
+    The optional <code>pycdft.gpu</code> backend does the <em>same math</em>
+    in torch, so it can run on a graphics card (NVIDIA CUDA, AMD ROCm or Apple
+    MPS) and can be faster on large grids. It mirrors the core interface and
+    adds a <code>device</code> argument:
+  </p>
+  <pre><code>from pycdft.gpu import CDFt
+ds = CDFt(device="cuda").fit_transform(obs, cm_hist, cm_future)</code></pre>
+  <p>
+    Device names follow torch: <code>"cuda"</code> (also used by ROCm builds),
+    <code>"mps"</code> and <code>"cpu"</code>. Install the torch build that
+    matches your hardware — see <code>docs/gpu.md</code>.
+  </p>
+  <p>
+    The numpy core never imports the GPU backend. Without torch,
+    <code>pycdft.gpu</code> is still importable but calls raise a clear error.
+    It was validated against the numpy backend on an AMD MI210 (ROCm),
+    matching to within floating-point precision. Validation on CUDA and MPS is
+    not reported here.
+  </p>
+</section>
+
+<!-- 9 ============================================================ -->
+<section id="compare">
+  <h2>9. How PyCDFt compares to other tools</h2>
+  <p>
+    PyCDFt follows the conventions of the R <code>CDFt</code> package and the
+    Python package <strong>ibicus</strong>, so it should agree closely with
+    both in the middle of the data. The differences are mostly in the
+    extremes (tails) and the exact grid. The comparison table, the measured
+    agreement and the analysis of where the implementations differ are in
+    the README and in <code>docs/design.md</code> §4.
+  </p>
+</section>
+
+<footer>
+  <p>
+    PyCDFt &middot; Apache-2.0 &middot; numpy core with an optional torch GPU
+    backend. A plain-language companion to the detailed notes in
+    <code>docs/design.md</code> and <code>docs/gpu.md</code>.
+  </p>
+</footer>
+
+</main>
+</body>
+</html>

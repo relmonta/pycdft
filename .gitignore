@@ -1,0 +1,32 @@
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+*.egg
+build/
+dist/
+.eggs/
+.venv/
+venv/
+env/
+
+# pytest / coverage
+.pytest_cache/
+.coverage
+.coverage.*
+htmlcov/
+coverage.xml
+
+# packaging
+*.whl
+*.tar.gz
+
+# examples output
+examples/figures/
+
+# editors / OS
+.idea/
+.vscode/
+*.swp
+.DS_Store
+.hybrid_logs/

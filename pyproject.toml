@@ -1,0 +1,79 @@
+[build-system]
+requires = ["setuptools>=77"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "PyCDFt"
+dynamic = ["version"]
+description = "CDF-t statistical downscaling / bias correction, vectorized over grid cells (pure numpy)"
+readme = "README.md"
+requires-python = ">=3.9"
+license = "Apache-2.0"
+license-files = ["LICENSE"]
+authors = [{ name = "PyCDFt contributors" }]
+keywords = [
+    "climate",
+    "downscaling",
+    "bias-correction",
+    "CDF-t",
+    "statistical-downscaling",
+    "geoscience",
+]
+classifiers = [
+    "Development Status :: 4 - Beta",
+    "Intended Audience :: Science/Research",
+    "Operating System :: OS Independent",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.9",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Programming Language :: Python :: 3.13",
+    "Topic :: Scientific/Engineering :: Atmospheric Science",
+    "Topic :: Scientific/Engineering :: Mathematics",
+]
+dependencies = ["numpy>=1.20"]
+
+[project.optional-dependencies]
+# torch is only needed by the optional GPU backend (pycdft.gpu); install a
+# torch build matching your hardware (CUDA / ROCm / CPU), see docs/gpu.md
+gpu = ["torch>=2.0"]
+# matplotlib is only needed by the examples
+examples = ["matplotlib>=3.4"]
+# ibicus is only needed by the optional cross-validation tests
+cross = ["ibicus>=1.1"]
+test = ["pytest>=7.0"]
+dev = ["pytest>=7.0", "pyflakes>=3.0"]
+
+# No [project.urls] yet: the repository is not public and the PyPI project
+# page does not exist before the first upload. Add Repository / Issues /
+# Documentation links here once the repo is public.
+
+[project.urls]
+Homepage = "https://github.com/relmonta/pycdft"
+Repository = "https://github.com/relmonta/pycdft"
+Issues = "https://github.com/relmonta/pycdft/issues"
+Documentation = "https://github.com/relmonta/pycdft/blob/main/docs/guide.html"
+Changelog = "https://github.com/relmonta/pycdft/blob/main/CHANGELOG.md"
+
+[tool.setuptools]
+packages = ["pycdft", "pycdft.gpu"]
+
+[tool.setuptools.dynamic]
+# Single source of truth: pycdft/__init__.py
+version = { attr = "pycdft.__version__" }
+
+[tool.setuptools.package-data]
+pycdft = ["py.typed"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+pythonpath = ["."]
+markers = [
+    "cross: cross-validation tests against external implementations (ibicus) or reference ports (R CDFt); may be skipped in minimal environments",
+    "gpu: tests of the optional torch-based GPU backend (pycdft.gpu); skipped when torch is unavailable",
+]
+addopts = "-ra"
+
+[tool.coverage.run]
+source = ["pycdft"]

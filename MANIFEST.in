@@ -1,0 +1,18 @@
+# Files that must reach the source distribution (sdist).
+# README.md, LICENSE and pyproject.toml are included automatically.
+
+include CHANGELOG.md
+include Makefile
+include CONTRIBUTING.md
+recursive-include docs *
+recursive-include examples *.py
+recursive-include examples/figures *.png
+recursive-include benchmarks *
+recursive-include tests *.py
+recursive-include .github *
+
+# Internal notes and machine-local artifacts: never ship these.
+exclude HANDOFF.md
+prune .hybrid_logs
+prune .pytest_cache
+global-exclude *.py[cod]
